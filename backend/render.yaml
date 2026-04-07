@@ -3,6 +3,7 @@ services:
     name: smart-insight-hub-backend
     env: node
     plan: free
+    rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
