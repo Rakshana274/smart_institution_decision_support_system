@@ -4,7 +4,6 @@ import AdminSidebar from '@/components/AdminSidebar';
 import StatCard from '@/components/StatCard';
 import { Users, Building2, GraduationCap, DollarSign, TrendingUp, Award } from 'lucide-react';
 import { institutionalAnalytics, departmentStats, staffPerformance, budgetDistribution } from '@/data/sampleData';
-import { getStudentList, getStaffList } from '@/data/dataManager';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Routes, Route } from 'react-router-dom';
 import AdminStaffPage from './admin/AdminStaffPage';
@@ -15,7 +14,6 @@ import ProfilePage from './profile/ProfilePage';
 import EditProfilePage from './profile/EditProfilePage';
 
 const COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#6366f1'];
-
 function AdminOverview() {
   const { totalFaculty, totalDepartments, totalBudget, graduationRate, employmentRate } = institutionalAnalytics;
   const [totalStudents, setTotalStudents] = useState(0);
@@ -24,51 +22,44 @@ function AdminOverview() {
 
   const [dynamicDeptStats, setDynamicDeptStats] = useState(departmentStats);
 
-  useEffect(() => {
-    Promise.all([getStudentList(), getStaffList()])
-      .then(([students, staff]) => {
-        setTotalStudents(students.length);
-        setTotalStaff(staff.length);
-        
-        const dynamicStaffPerformance = staff.map(s => {
-          const baseScore = (s.rating || 0) * 20;
-          return {
-            name: s.name.split(' ')[0] || s.name,
-            teaching: baseScore,
-            research: Math.max(0, baseScore - (Math.random() * 15)),
-            service: Math.max(0, baseScore - (Math.random() * 10))
-          };
-        });
-        setStaffChartData(dynamicStaffPerformance);
+useEffect(() => {
+  const API_URL = import.meta.env.VITE_API_URL || "";
 
-        const updatedDeptStats = departmentStats.map(dept => {
-          const deptStudents = students.filter(s => s.department === dept.name).length;
-          const deptFaculty = staff.filter(s => s.department === dept.name).length;
-          return { ...dept, students: deptStudents, faculty: deptFaculty };
-        });
-        
-        // Also capture departments from DB that might not be in sample data
-        const existingDeptNames = new Set(departmentStats.map(d => d.name));
-        const allDepts = new Set([...students.map(s => s.department), ...staff.map(s => s.department)]);
-        
-        allDepts.forEach(deptName => {
-          if (deptName && !existingDeptNames.has(deptName)) {
-            const deptStudents = students.filter(s => s.department === deptName).length;
-            const deptFaculty = staff.filter(s => s.department === deptName).length;
-            updatedDeptStats.push({
-              name: deptName,
-              students: deptStudents,
-              faculty: deptFaculty,
-              budget: 1000000, // default
-              rating: 4.0 // default
-            });
-          }
-        });
-        
-        setDynamicDeptStats(updatedDeptStats);
-      })
-      .catch(console.error);
-  }, []);
+  console.log("API URL:", API_URL);
+
+  Promise.all([
+    fetch(`${API_URL}/api/students`).then(res => res.json()),
+    fetch(`${API_URL}/api/staff`).then(res => res.json())
+  ])
+    .then(([students, staff]) => {
+  if (!students || !staff) {
+    throw new Error("Invalid API response");
+  }
+      setTotalStudents(students.length);
+      setTotalStaff(staff.length);
+      
+      const dynamicStaffPerformance = staff.map((s: any) => {
+        const baseScore = (s.rating || 0) * 20;
+        return {
+          name: s.name.split(' ')[0] || s.name,
+          teaching: baseScore,
+          research: Math.max(0, baseScore - (Math.random() * 15)),
+          service: Math.max(0, baseScore - (Math.random() * 10))
+        };
+      });
+
+      setStaffChartData(dynamicStaffPerformance);
+
+      const updatedDeptStats = departmentStats.map(dept => {
+        const deptStudents = students.filter((s: any) => s.department === dept.name).length;
+        const deptFaculty = staff.filter((s: any) => s.department === dept.name).length;
+        return { ...dept, students: deptStudents, faculty: deptFaculty };
+      });
+
+      setDynamicDeptStats(updatedDeptStats);
+    })
+    .catch(console.error);
+}, []);
 
   return (
     <div>
